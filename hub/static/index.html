@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8">
+  <title>WebSockets Demo</title>
+
+</head>
+
+<body>
+  <div id="page-wrapper">
+    <h1>WebSockets Demo</h1>
+
+    <div id="status">Connecting...</div>
+
+    <ul id="messages"></ul>
+
+    <form id="message-form" action="#" method="post">
+      <textarea id="message" placeholder="Write your message here..." required></textarea>
+      <button type="submit">Send Message</button>
+      <button type="button" id="close">Close Connection</button>
+    </form>
+    <form id="login-form" action="#" method="post">
+      <input type="text" id="user-name">
+      <button>Login</button>
+    </form>
+  </div>
+
+  <script>
+    window.onload = function () {
+      var form = document.getElementById('message-form')
+      var messageField = document.getElementById('message')
+      var messagesList = document.getElementById('messages')
+      var socketStatus = document.getElementById('status')
+      var closeBtn = document.getElementById('close')
+      var nameField = document.getElementById('user-name')
+      var loginForm = document.getElementById('login-form')
+      var socket
+
+
+      //login
+      loginForm.onsubmit = function (e) {
+        //Create new WebSocket
+        e.preventDefault();
+        socket = new WebSocket('ws://localhost:8080/ws?token=' + nameField.value)
+
+        // Show a conneted message when the WebSocket is opened
+        socket.onopen = function (event) {
+          socketStatus.innerHTML = 'Connected to :' + event.currentTarget.url;
+          socketStatus.className = 'open';
+
+          // Handle any errors that occur.
+          socket.onerror = function (error) {
+            console.log('WebSocket Error: ' + error);
+          };
+        }
+        // send message
+        form.onsubmit = function (e) {
+          e.preventDefault();
+          var msg = {
+            message: messageField.value,
+            sender_name: nameField.value,
+            type: "new_message"
+          }
+          socket.send(JSON.stringify(msg));
+          //messagesList.innerHTML += '<li class="sent"><span<Sent:</span>' + message +'</li>' 
+          messageField.value = '';
+          return false
+        }
+        socket.onmessage = function (event) {
+          data = JSON.parse(event.data)
+          var message = data.content.message;
+          console.log(data)
+          messagesList.innerHTML += '<li class="received"><span>' + data.content.sender_name + ' : </span>' +
+            message + '</li>';
+        };
+        socket.onclose = function (event) {
+          socketStatus.innerHTML = 'Disconnected from WebSocket.';
+          socketStatus.className = 'closed';
+        };
+
+        closeBtn.onclick = function (e) {
+          e.preventDefault();
+          socket.close();
+          return false
+        }
+      }
+
+    }
+  </script>
+</body>
+
+</html>
