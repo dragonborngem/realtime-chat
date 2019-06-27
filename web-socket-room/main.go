@@ -30,7 +30,7 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 func setRoute() {
 	r := mux.NewRouter()
 	r.HandleFunc("/", serveHome)
-	r.HandleFunc("/ws/{room}", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
 		serveWs(w, r)
 	})
 

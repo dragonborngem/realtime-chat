@@ -27,7 +27,8 @@
                 }
                 var sendData = {
                     type: "new_mess",
-                    content: msg.value
+                    content: msg.value,
+                    sender_name: sender.value
                 }
 
                 conn.send(JSON.stringify(sendData));
@@ -37,19 +38,21 @@
 
             document.getElementById("room").onsubmit = function (e) {
                 e.preventDefault();
-                if (!conn) {
-                    rm = connectRoom.value
-                    conn = new WebSocket("ws://" + document.location.host + "/ws/" + rm);
-                } else {
-                    rm = connectRoom.value
-                    conn.close()
-                    conn = new WebSocket("ws://" + document.location.host + "/ws/" + rm);
-                    conn.onopen = function (evt) {
-                        var item = document.createElement("div");
-                        item.innerHTML = "<b>Connected to room " + rm + "</b>";
-                        appendLog(item);
-                    }
+
+                rm = connectRoom.value
+                var sendData = {
+                    type: "connect_room",
+                    room: rm,
                 }
+                conn.send(JSON.stringify(sendData))
+                // conn.close()
+                // conn = new WebSocket("ws://" + document.location.host + "/ws/" + rm);
+                // conn.onopen = function (evt) {
+                var item = document.createElement("div");
+                item.innerHTML = "<b>Connected to room " + rm + "</b>";
+                appendLog(item);
+                //}
+
                 if (!msg.value) {
                     return false;
                 }
@@ -62,19 +65,19 @@
                 var url = new URL(window.location.href);
                 room = url.searchParams.get("room");
                 console.log("ws://" + document.location.host + "/ws/" + room)
-                conn = new WebSocket("ws://" + document.location.host + "/ws/" + room);
+                //conn = new WebSocket("ws://" + document.location.host + "/ws/" + room);
+                conn = new WebSocket("ws://" + document.location.host + "/ws");
                 conn.onclose = function (evt) {
                     var item = document.createElement("div");
                     item.innerHTML = "<b>Connection closed.</b>";
                     appendLog(item);
                 };
                 conn.onmessage = function (evt) {
-                    var messages = evt.data.split('\n');
-                    for (var i = 0; i < messages.length; i++) {
-                        var item = document.createElement("div");
-                        item.innerText = messages[i];
-                        appendLog(item);
-                    }
+                    var messages = JSON.parse(evt.data);
+                    console.log(conn)
+                    var item = document.createElement("div");
+                    item.innerText = messages.sender_name + " : " + messages.content;
+                    appendLog(item);
                 };
             } else {
                 var item = document.createElement("div");
@@ -126,7 +129,8 @@
     <div class="form">
         <form id="mess">
             <input type="submit" value="Send" />
-            <input type="text" id="msg" size="64" />
+            <input type="text" id="msg" size="64" placeholder="Message here" />
+            <input type="text" id="sender" size="32" placeholder="Name here" />
         </form>
         <form id="room">
             <input type="submit" value="Connect to Room" />

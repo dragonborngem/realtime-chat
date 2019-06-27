@@ -49,17 +49,47 @@ func (s subscription) readPump() {
 	c.ws.SetReadDeadline(time.Now().Add(pongWait))
 	c.ws.SetPongHandler(func(string) error { c.ws.SetReadDeadline(time.Now().Add(pongWait)); return nil })
 	for {
+		fmt.Printf("%+v\n", c)
 		var receiveMessage map[string]interface{}
 		err := c.ws.ReadJSON(&receiveMessage)
 		if err != nil {
 			if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway) {
 				log.Printf("error: %v", err)
 			}
+			fmt.Println("err read new mess")
+			fmt.Println(err)
 			break
 		}
-		m := message{receiveMessage, s.room}
-		// change hereeeeeeeeeeeeeee
-		h.broadcast <- m
+		if receiveMessage["type"] == "connect_room" {
+			newSub := subscription{
+				conn: s.conn,
+			}
+			newSub.room = fmt.Sprintf("%v", receiveMessage["room"])
+			//unregister in current room, dont close connection
+			connections := h.rooms[s.room]
+			if connections != nil {
+				if _, ok := connections[s.conn]; ok {
+					delete(h.rooms[s.room], s.conn)
+					fmt.Println("leave current room and connect to new", s.conn)
+					if len(connections) == 0 {
+						delete(h.rooms, s.room)
+					}
+				}
+			}
+			//register in new room
+			connections = h.rooms[newSub.room]
+			if connections == nil {
+				connections = make(map[*connection]bool)
+				h.rooms[newSub.room] = connections
+			}
+			h.rooms[newSub.room][s.conn] = true
+			s.room = newSub.room
+			c = s.conn
+			// change hereeeeeeeeeeeeeee
+		} else {
+			m := message{receiveMessage, s.room}
+			h.broadcast <- m
+		}
 	}
 }
 
@@ -72,9 +102,10 @@ func (c *connection) write(mt int, payload []byte) error {
 // writePump pumps messages from the hub to the websocket connection.
 func (s *subscription) writePump() {
 	c := s.conn
-	ticker := time.NewTicker(pingPeriod)
+	ticker := time.NewTicker(10 * time.Second)
 	defer func() {
 		ticker.Stop()
+		fmt.Println("here")
 		c.ws.Close()
 	}()
 	for {
