@@ -95,14 +95,14 @@ func (s subscription) readPump() {
 
 // write writes a message with the given message type and payload.
 func (c *connection) write(mt int, payload []byte) error {
-	c.ws.SetWriteDeadline(time.Now().Add(writeWait))
+	//c.ws.SetWriteDeadline(time.Now().Add(writeWait))
 	return c.ws.WriteMessage(mt, payload)
 }
 
 // writePump pumps messages from the hub to the websocket connection.
 func (s *subscription) writePump() {
 	c := s.conn
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(pingPeriod)
 	defer func() {
 		ticker.Stop()
 		fmt.Println("here")
@@ -113,13 +113,17 @@ func (s *subscription) writePump() {
 		case message, ok := <-c.send:
 			if !ok {
 				c.write(websocket.CloseMessage, []byte{})
+				fmt.Println("here 1")
 				return
 			}
 			if err := c.ws.WriteJSON(message); err != nil {
+				fmt.Println(err)
+				fmt.Println("here 2")
 				return
 			}
 		case <-ticker.C:
 			if err := c.write(websocket.PingMessage, []byte{}); err != nil {
+				fmt.Println("here 3")
 				return
 			}
 		}

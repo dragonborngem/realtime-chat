@@ -26,13 +26,17 @@ type Hub struct {
 
 	// Unregister requests from connections.
 	unregister chan subscription
+
+	//
+	connectRoom chan subscription
 }
 
 var h = Hub{
-	broadcast:  make(chan message),
-	register:   make(chan subscription),
-	unregister: make(chan subscription),
-	rooms:      make(map[string]map[*connection]bool),
+	broadcast:   make(chan message),
+	register:    make(chan subscription),
+	unregister:  make(chan subscription),
+	connectRoom: make(chan subscription),
+	rooms:       make(map[string]map[*connection]bool),
 }
 
 func (h *Hub) run() {
@@ -57,6 +61,8 @@ func (h *Hub) run() {
 					}
 				}
 			}
+		// case s := <-h.connectRoom:
+
 		case m := <-h.broadcast:
 			connections := h.rooms[m.room]
 			for c := range connections {
